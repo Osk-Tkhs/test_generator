@@ -2,70 +2,64 @@
 import pandas as pd
 import io
 
-st.title("📝 汎用テスト作成ツール")
+st.set_page_config(page_title="Test Generator", layout="centered") # 中央寄せで読みやすく
+st.title("📝 Test Generator for Excel")
 
-uploaded_file = st.file_uploader("問題データ(xlsx)を読み込んでください", type=["xlsx"])
+# --- STEP 1: ファイル読み込み ---
+uploaded_file = st.file_uploader("1. Excelファイルをアップロード", type=["xlsx"])
 
 if uploaded_file is not None:
-    # header=0 で1行目を見出しとして読み込みますが、
-    # その後の処理では列名ではなく「位置」を使います
     df = pd.read_excel(uploaded_file)
     
-    # 列数チェック（最低3列あるか）
-    if len(df.columns) < 3:
-        st.error("Excelファイルには最低3つの列（通し番号、問題、解答）が必要です。")
-    else:
-        # 列名に関わらず、位置でリネームして扱いやすくする
-        # 0番目: 通し番号, 1番目: 問題, 2番目: 解答
-        col_names = df.columns
-        df_working = df.copy()
+    # --- STEP 2: 設定入力 (横並びの入力欄) ---
+    st.divider()
+    st.subheader("2. 抽出条件の設定")
+    
+    # 3つの入力欄を横に並べる
+    col1, col2, col3 = st.columns(3)
+    
+    min_val = int(df.iloc[:, 0].min())
+    max_val = int(df.iloc[:, 0].max())
+
+    with col1:
+        start_num = st.number_input("開始番号", min_val, max_val, min_val)
+    with col2:
+        end_num = st.number_input("終了番号", start_num, max_val, max_val)
         
-        st.write(f"### 元データプレビュー")
-        st.dataframe(df.head())
+    # 範囲内のデータ数を計算
+    mask = (df.iloc[:, 0] >= start_num) & (df.iloc[:, 0] <= end_num)
+    filtered_df = df[mask]
+    available_count = len(filtered_df)
 
-        st.sidebar.header("テスト生成設定")
+    with col3:
+        count = st.number_input(f"問題数 (最大:{available_count})", 1, max(1, available_count), min(10, available_count))
 
-        # 列の位置（0番目の列）を「通し番号」として数値を抽出
-        # 数値以外のデータが混ざっている場合に備えてエラーハンドリング
-        try:
-            ids = pd.to_numeric(df.iloc[:, 0])
-            min_no = int(ids.min())
-            max_no = int(ids.max())
-        except:
-            st.error("1列目（通し番号）に数字以外のデータが含まれています。確認してください。")
-            st.stop()
+    # --- STEP 3: 生成実行 ---
+    st.divider()
+    
+    # ボタンを中央寄せっぽく配置するために空の列を挟む
+    _, btn_col, _ = st.columns([1, 2, 1])
+    
+    if btn_col.button("🚀 この条件でテストを生成する", use_container_width=True):
+        if available_count == 0:
+            st.warning("指定された範囲にデータがありません。")
+        else:
+            # ランダム抽出
+            test_df = filtered_df.sample(n=count).sort_values(by=df.columns[0])
+            
+            st.success(f"抽出完了！ ({count}問)")
+            st.dataframe(test_df, use_container_width=True)
 
-        start_num = st.sidebar.number_input("開始番号", min_no, max_no, min_no)
-        end_num = st.sidebar.number_input("終了番号", start_num, max_no, max_no)
-        
-        # 指定範囲の行を抽出（1列目の値でフィルタリング）
-        mask = (ids >= start_num) & (ids <= end_num)
-        available_range_df = df[mask]
-        max_questions = len(available_range_df)
-        
-        count = st.sidebar.number_input(f"問題数 (最大 {max_questions}件)", 1, max(1, max_questions), min(10, max_questions))
-
-        if st.button("テストを生成する"):
-            if max_questions == 0:
-                st.error("指定された範囲に問題が見つかりません。")
-            else:
-                # 重複なしランダム抽出
-                test_df = available_range_df.sample(n=count).sort_values(by=df.columns[0])
-                
-                st.success(f"範囲内から {count}問 を抽出しました。")
-                st.dataframe(test_df)
-
-                # Excel出力処理
-                output = io.BytesIO()
-                with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-                    # 元の列名のまま出力します
-                    test_df.to_excel(writer, index=False, sheet_name='TestSheet')
-                
-                processed_data = output.getvalue()
-
-                st.download_button(
-                    label="📥 テストをExcel(.xlsx)で保存",
-                    data=processed_data,
-                    file_name="generated_test.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                )
+            # Excel出力用バッファ
+            output = io.BytesIO()
+            with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+                test_df.to_excel(writer, index=False, sheet_name='Test')
+            
+            # ダウンロードボタンを目立たせる
+            st.download_button(
+                label="📥 生成したExcelファイルを保存する",
+                data=output.getvalue(),
+                file_name=f"test_{start_num}-{end_num}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True # ボタンを横いっぱいに広げる
+            )
