@@ -45,18 +45,42 @@ uploaded_file = st.file_uploader("出題リスト(xlsx)をアップロードし�
 
 if uploaded_file is not None:
     try:
+        # Excel読み込み
         df_raw = pd.read_excel(uploaded_file)
-        
-        # 1. A列（0列目）に何かしら入力がある「一番下の行」を特定
-        # A列が空でない行のインデックスの最大値を取得
+
+        # --- ① 全範囲に対する処理 (スペースのみのセル & 書式のみセルの対策) ---
+        def clear_pure_spaces(x):
+            if isinstance(x, str):
+                # 前後の空白を消して、中身が何もなくなれば None にする
+                cleaned = x.strip().replace('　', '')
+                return None if cleaned == '' else x
+            return x
+
+        # 全セルに対し「スペースのみ」なら空にする処理を適用
+        df_raw = df_raw.applymap(clear_pure_spaces)
+
+        # --- ② A列(通し番号)特化の処理 (数値内のスペースも削除) ---
+        def remove_all_spaces(x):
+            if isinstance(x, str):
+                # A列は文字の中にあるスペースもすべて排除
+                return x.strip().replace(' ', '').replace('　', '')
+            return x
+
+        df_raw.iloc[:, 0] = df_raw.iloc[:, 0].apply(remove_all_spaces)
+
+        # --- ③ 有効範囲の特定 ---
+        # A列に有効な値がある「一番下の行」を特定 (書式のみの空セルはここで排除される)
         last_idx = df_raw.iloc[:, 0].dropna().index.max()
         
         if pd.isna(last_idx):
-            st.error("1列目（問題No.）にデータが1件も見つかりません。")
+            st.error("1列目に数値を入力してください。")
             st.stop()
             
-        # A列のデータがある最終行までを「解析対象の全データ」として切り出す
+        # A列の末尾までを「有効データ」として切り出す
         df = df_raw.loc[:last_idx].copy()
+
+        # --- 以降、数値チェック・連番チェック・空欄チェック ---
+        # (ここからは、A列が数値か、連番か、B・C列に空欄がないかをチェックするロジック)
 
         # --- ① 1列目の数値・形式チェック ---
         # A列を数値変換（数値化できないものはNaNにする）
@@ -167,6 +191,7 @@ if uploaded_file is not None:
         st.error(f"エラーが発生しました: {e}")
 else:
     st.info("上の枠にExcelファイルをドラッグ＆ドロップしてください。")
+
 
 
 
