@@ -8,30 +8,42 @@ st.title("📝 Test Generator for Excel")
 
 
 # --- 使い方とテンプレート提供 ---
-st.write("### 🚀 使い方と準備")
-st.markdown("""
-1. 下の **「雛形」** または **「見本」** をダウンロードして問題リストを作成してください。
-2. 作成したファイルを **「1. Excelファイルをアップロード」** 枠にドラッグ＆ドロップします。
-3. 抽出範囲と問題数を設定して、テストを生成してください。
-""")
 
-# テンプレートダウンロードボタンを横並びに
-col_dl1, col_dl2 = st.columns(2)
-with col_dl1:
-    if os.path.exists("template.xlsx"):
-        with open("template.xlsx", "rb") as f:
-            st.download_button("📁 雛形(空)をダウンロード", f, "template.xlsx", use_container_width=True)
-with col_dl2:
-    if os.path.exists("sample_data.xlsx"):
-        with open("sample_data.xlsx", "rb") as f:
-            st.download_button("💡 見本(データ入)をダウンロード", f, "sample_data.xlsx", use_container_width=True)
+st.write("### 🚀 準備：問題リストの用意")
+
+# 2つのタブで案内を分ける
+tab1, tab2 = st.tabs(["既存のファイルを使う", "新しく作成する"])
+
+with tab1:
+    st.success("""
+    **お手持ちのExcelファイルを使う際は,以下の3点をご確認ください：**
+    1.  **左端（A列）**が数値の「通し番号」になっている（1, 2, 3...）
+    2.  **2列目（B列）**が「問題」、**3列目（C列）**が「解答」である
+    3.  1行目は見出し（タイトル）が入っている
+    """)
+
+with tab2:
+    st.info("これから作成する場合は、以下の雛形をダウンロードして入力してください。")
+    # ここにダウンロードボタンを配置
+
+
+    # テンプレートダウンロードボタンを横並びに
+    col_dl1, col_dl2 = st.columns(2)
+    with col_dl1:
+        if os.path.exists("template.xlsx"):
+            with open("template.xlsx", "rb") as f:
+                st.download_button("📁 雛形(空)をダウンロード", f, "template.xlsx", use_container_width=True)
+    with col_dl2:
+        if os.path.exists("sample_data.xlsx"):
+            with open("sample_data.xlsx", "rb") as f:
+                st.download_button("💡 見本(データ入)をダウンロード", f, "sample_data.xlsx", use_container_width=True)
 
 # 【ここが目立つ枠】利用への重要な注意書き
 st.warning("""
 **⚠️ 重要：Excelファイルの作成ルール**
 - **1列目（通し番号）** は、必ず **「2行目から」** 入力してください。
 - **「1〜問題数までの連番」** を、必ず **「半角数字」** で入力してください。
-- 1行目は見出しとして扱われるため、何が書いてあっても問題ありません。
+- 1行目は見出しとして扱われるため、何が書いてあっても問題ありません。** (=1行目に問題No,問題,解答などを入力しても反映されません) **
 """, icon="ℹ️")
 
 
