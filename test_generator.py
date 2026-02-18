@@ -9,40 +9,48 @@ st.title("📝 Test Generator for Excel")
 
 # --- 使い方とテンプレート提供 ---
 
-st.write("### ①：問題リストの準備")
+st.write("### ①：出題リスト(xlsx)の準備")
 
 # 2つのタブで案内を分ける
-tab1, tab2 = st.tabs(["A:既存のファイルを使う", "B:新しく作成する"])
+tab1, tab2 = st.tabs(["A: 新しく作成する", "B: 既存のファイルを使う"])
 
 
 with tab1:
-    st.info("これから作成する場合は、以下の雛形をダウンロードして入力してください。")
+    st.info("これから作成する場合は、以下のひな型をダウンロードして入力してください。")
     # ここにダウンロードボタンを配置
 
     col_dl1, col_dl2 = st.columns(2)
     with col_dl1:
         if os.path.exists("template.xlsx"):
             with open("template.xlsx", "rb") as f:
-                st.download_button("📁 雛形(空)をダウンロード", f, "template.xlsx", use_container_width=True)
+                st.download_button("📁 ひな型(空)をダウンロード", f, "template.xlsx", use_container_width=True)
     with col_dl2:
         if os.path.exists("sample_data.xlsx"):
             with open("sample_data.xlsx", "rb") as f:
                 st.download_button("💡 見本(データ入)をダウンロード", f, "sample_data.xlsx", use_container_width=True)
+    
+    st.success("""
+    **作成した出題リスト(xlsx)について,以下の2点をご確認ください：**
+    - 1行目は「問題No」「問題」「解答」"などの**見出し行**である
+    - 2行目以降は 左端（A列）が **「半角数字」** で **「1～問題数」** の **「連番」** になっている（1, 2, 3...問題数）
+    """)
+
+
 with tab2:
 
     st.success("""
-    **作成した/お手持ちの問題ファイルについて,以下の2点をご確認ください：**
+    **お手持ちの出題リスト(xlsx)について,以下の2点をご確認ください：**
     - 1行目は「問題No」「問題」「解答」"などの**見出し行**である
     - 2行目以降は 左端（A列）が **「半角数字」** で **「1～問題数」** の **「連番」** になっている（1, 2, 3...問題数）
     """)
 
 st.divider()
 
-
+st.write("### ②：出題リスト(xlsx)のアップロード")
 
 # --- STEP 1: ファイル読み込み ---
 # accept_multiple_files=False（デフォルト）により、1つしか選択できません
-uploaded_file = st.file_uploader("1. Excelファイルを1つアップロードしてください", type=["xlsx"], accept_multiple_files=False)
+uploaded_file = st.file_uploader("出題リスト(xlsx)をアップロードしてください", type=["xlsx"], accept_multiple_files=False)
 
 if uploaded_file is not None:
     try:
@@ -70,7 +78,7 @@ if uploaded_file is not None:
 
         # --- STEP 2: 設定入力 ---
         st.divider()
-        st.subheader("2. 抽出条件の設定")
+        st.subheader("### ③：出題範囲,出題数の設定")
         
         col1, col2, col3 = st.columns(3)
         
@@ -142,6 +150,7 @@ if uploaded_file is not None:
 else:
     # ファイルがアップロードされていない時のガイド
     st.info("上の枠にExcelファイルをドラッグ＆ドロップしてください。")
+
 
 
 
