@@ -10,21 +10,22 @@ st.title("📝 Test Generator for Excel")
 # --- 冒頭の使い方のセクション ---
 st.write("### 使い方")
 
-# 実在のファイルを読み込んでダウンロードボタンに設定
-template_file_path = "template.xlsx" # GitHubに置いたファイル名
+col1, col2 = st.columns(2)
 
-if os.path.exists(template_file_path):
-    with open(template_file_path, "rb") as f:
-        btn = st.download_button(
-            label="📁 指定様式（template.xlsx）をダウンロード",
-            data=f,
-            file_name="problem_template.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
-else:
-    st.error("テンプレートファイルが見つかりません。リポジトリに template.xlsx を配置してください。")
+
+with col1:
+    if os.path.exists("sample_data.xlsx"):
+        with open("sample_data.xlsx", "rb") as f:
+            st.download_button("💡 見本(データ入)をDL", f, "sample_data.xlsx")
+
+with col2:
+    if os.path.exists("template.xlsx"):
+        with open("template.xlsx", "rb") as f:
+            st.download_button("📁 雛形(空)をDL", f, "template.xlsx")
+
 
 st.divider()
+
 
 
 # --- STEP 1: ファイル読み込み ---
