@@ -47,49 +47,60 @@ if uploaded_file is not None:
     try:
         df_raw = pd.read_excel(uploaded_file)
         
-        # 1. 有効なデータの最終行を特定する（B列かC列に何か書いてある最後の行）
-        # これより下の完全な空行は「ゴミ」として無視する
-        last_idx = df_raw.iloc[:, 1:3].dropna(how='all').index.max()
+        # 1. A列（0列目）に何かしら入力がある「一番下の行」を特定
+        # A列が空でない行のインデックスの最大値を取得
+        last_idx = df_raw.iloc[:, 0].dropna().index.max()
         
         if pd.isna(last_idx):
-            st.error("データが1件も見つかりません。")
+            st.error("1列目（問題No.）にデータが1件も見つかりません。")
             st.stop()
             
-        # 最終行までのデータを「有効範囲」とする
+        # A列のデータがある最終行までを「解析対象の全データ」として切り出す
         df = df_raw.loc[:last_idx].copy()
 
-        # --- ① 1列目の数値チェック ---
+        # --- ① 1列目の数値・形式チェック ---
+        # A列を数値変換（数値化できないものはNaNにする）
         first_col_numeric = pd.to_numeric(df.iloc[:, 0], errors='coerce')
+        
         if first_col_numeric.isna().any():
+            # A列に文字が混じっている行を特定
             error_rows = df[first_col_numeric.isna()].index + 2
-            st.error(f"⚠️ 1列目に数値以外のデータがあります。行: {list(error_rows)}")
+            st.error(f"⚠️ 1列目（問題No.）に数値以外のデータが含まれています。")
+            st.warning(f"該当するExcel行番号: {list(error_rows)}")
             st.stop()
 
-        # --- ② 連番チェック ---
-        # 1から最終行数までの連番と比較
+        # --- ② 1列目の連番チェック (1〜Nになっているか) ---
+        # 期待される連番 [1, 2, 3, ..., 行数]
         expected_series = pd.Series(range(1, len(df) + 1))
+        
         if not (first_col_numeric.values == expected_series.values).all():
-            st.error("⚠️ 1列目が 1からの連番 になっていません。")
+            st.error("⚠️ 1列目が「1からの連番」になっていません。")
             st.info(f"期待される最終番号: {len(df)} (現在の最大: {int(first_col_numeric.max())})")
+            st.warning("途中に欠番、重複、または1から始まっていない箇所があります。")
             st.stop()
 
-        # --- ③ 空欄（片方だけ空）チェック ---
-        target_cols = df.iloc[:, 1:3]
-        if target_cols.isna().any().any():
-            error_details = []
-            for col_idx in [1, 2]:
-                # NaNがある行のインデックスを取得
-                nan_indices = df[df.iloc[:, col_idx].isna()].index
-                if not nan_indices.empty:
-                    col_name = df.columns[col_idx]
-                    # 元のdfのインデックスをそのまま使っているので Excelの行番号と一致する
-                    rows = [str(i + 2) for i in nan_indices]
-                    error_details.append(f"・**{col_name}** 列の {', '.join(rows)} 行目")
-            
-            st.error("⚠️ 問題、または解答に空欄があります。")
+        # --- ③ 2列目(問題)・3列目(解答)の空欄チェック ---
+        # 1列目に番号がある行の中で、B列(1)かC列(2)が空の場所を特定
+        error_details = []
+        for col_idx in [1, 2]:
+            nan_mask = df.iloc[:, col_idx].isna()
+            if nan_mask.any():
+                col_name = df.columns[col_idx]
+                # Excelの行番号（index + 2）を取得
+                nan_rows = df[nan_mask].index + 2
+                rows_str = ", ".join([str(r) for r in nan_rows])
+                error_details.append(f"・**{col_name}** 列の {rows_str} 行目")
+
+        if error_details:
+            st.error("⚠️ 問題、または解答に記入漏れ（空欄）があります。")
             for detail in error_details:
                 st.warning(detail)
+            st.info("1列目に番号がある行は、問題と解答をすべて埋める必要があります。")
             st.stop()
+
+        # --- ここまで来ればデータは完璧 ---
+        st.success(f"データチェック完了：{len(df)}件の問題を正しく読み込みました。")
+
 
         # --- ③：設定入力 ---
         st.divider()
@@ -156,5 +167,6 @@ if uploaded_file is not None:
         st.error(f"エラーが発生しました: {e}")
 else:
     st.info("上の枠にExcelファイルをドラッグ＆ドロップしてください。")
+
 
 
