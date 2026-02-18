@@ -9,7 +9,7 @@ st.title("📝 Test Generator for Excel")
 
 # --- 使い方とテンプレート提供 ---
 
-st.write("### 🚀 準備：問題リストの用意")
+st.write("### ①：問題リストの用意")
 
 # 2つのタブで案内を分ける
 tab1, tab2 = st.tabs(["既存のファイルを使う", "新しく作成する"])
@@ -153,3 +153,4 @@ if uploaded_file is not None:
 else:
     # ファイルがアップロードされていない時のガイド
     st.info("上の枠にExcelファイルをドラッグ＆ドロップしてください。")
+
