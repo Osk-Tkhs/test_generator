@@ -7,21 +7,32 @@ st.set_page_config(page_title="Test Generator", layout="centered")
 st.title("📝 Test Generator for Excel")
 
 
-# --- 冒頭の使い方のセクション ---
-st.write("### 使い方")
+# --- 使い方とテンプレート提供 ---
+st.write("### 🚀 使い方と準備")
+st.markdown("""
+1. 下の **「雛形」** または **「見本」** をダウンロードして問題リストを作成してください。
+2. 作成したファイルを **「1. Excelファイルをアップロード」** 枠にドラッグ＆ドロップします。
+3. 抽出範囲と問題数を設定して、テストを生成してください。
+""")
 
-col1, col2 = st.columns(2)
-
-
-with col1:
-    if os.path.exists("sample_data.xlsx"):
-        with open("sample_data.xlsx", "rb") as f:
-            st.download_button("💡 見本(データ入)をDL", f, "sample_data.xlsx")
-
-with col2:
+# テンプレートダウンロードボタンを横並びに
+col_dl1, col_dl2 = st.columns(2)
+with col_dl1:
     if os.path.exists("template.xlsx"):
         with open("template.xlsx", "rb") as f:
-            st.download_button("📁 雛形(空)をDL", f, "template.xlsx")
+            st.download_button("📁 雛形(空)をダウンロード", f, "template.xlsx", use_container_width=True)
+with col_dl2:
+    if os.path.exists("sample_data.xlsx"):
+        with open("sample_data.xlsx", "rb") as f:
+            st.download_button("💡 見本(データ入)をダウンロード", f, "sample_data.xlsx", use_container_width=True)
+
+# 【ここが目立つ枠】利用への重要な注意書き
+st.warning("""
+**⚠️ 重要：Excelファイルの作成ルール**
+- **1列目（通し番号）** は、必ず **「2行目から」** 入力してください。
+- **「1〜問題数までの連番」** を、必ず **「半角数字」** で入力してください。
+- 1行目は見出しとして扱われるため、何が書いてあっても問題ありません。
+""", icon="ℹ️")
 
 
 st.divider()
