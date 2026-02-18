@@ -1,13 +1,35 @@
 ﻿import streamlit as st
 import pandas as pd
 import io
+import os
 
 st.set_page_config(page_title="Test Generator", layout="centered") 
 st.title("📝 Test Generator for Excel")
 
+
+# --- 冒頭の使い方のセクション ---
+st.write("### 使い方")
+
+# 実在のファイルを読み込んでダウンロードボタンに設定
+template_file_path = "template.xlsx" # GitHubに置いたファイル名
+
+if os.path.exists(template_file_path):
+    with open(template_file_path, "rb") as f:
+        btn = st.download_button(
+            label="📁 指定様式（template.xlsx）をダウンロード",
+            data=f,
+            file_name="problem_template.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+else:
+    st.error("テンプレートファイルが見つかりません。リポジトリに template.xlsx を配置してください。")
+
+st.divider()
+
+
 # --- STEP 1: ファイル読み込み ---
 # accept_multiple_files=False（デフォルト）により、1つしか選択できません
-uploaded_file = st.file_uploader("1. Excelファイルを1つだけアップロードしてください", type=["xlsx"], accept_multiple_files=False)
+uploaded_file = st.file_uploader("1. Excelファイルを1つアップロードしてください", type=["xlsx"], accept_multiple_files=False)
 
 if uploaded_file is not None:
     try:
