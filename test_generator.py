@@ -78,7 +78,7 @@ if uploaded_file is not None:
 
         # --- STEP 2: 設定入力 ---
         st.divider()
-        st.subheader("### ③：出題範囲,出題数の設定")
+        st.subheader("③：出題範囲,出題数の設定")
         
         col1, col2, col3 = st.columns(3)
         
@@ -150,6 +150,7 @@ if uploaded_file is not None:
 else:
     # ファイルがアップロードされていない時のガイド
     st.info("上の枠にExcelファイルをドラッグ＆ドロップしてください。")
+
 
 
 
