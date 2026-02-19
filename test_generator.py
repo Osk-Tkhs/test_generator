@@ -187,46 +187,54 @@ if uploaded_file is not None:
                     # ファイル名に使えない文字を置換
                     safe_name = re.sub(r'[\\/:*?"<>|]', '', original_name)
                     output_filename = f"{safe_name}_{start_num}-{end_num}_{now}.xlsx"
-                
-                    # 2. Excel出力バッファの作成
+                    #
+                    # 2. 出力データの準備 (問題Noを除外: 1列目以降を使用)
+                    # 問題シート用: [問題, 解答欄(空)]
+                    q_sheet_df = test_df.iloc[:, [1]].copy()
+                    q_sheet_df["解答欄"] = "" # 空の解答欄を追加
+    
+                    # 解答付シート用: [問題, 解答]
+                    ans_sheet_df = test_df.iloc[:, [1, 2]].copy()
+
                     output = io.BytesIO()
                     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
                         workbook = writer.book
-                        
-                        # 書式設定
-                        fmt_border = workbook.add_format({'border': 1, 'align': 'left', 'valign': 'vcenter'})
-                        fmt_header = workbook.add_format({'bold': True, 'bg_color': '#EFEFEF', 'border': 1, 'align': 'center'})
-                
-                        # シートの定義 (問題のみ / 解答付き)
-                        sheets_config = {
-                            "問題用紙": test_df.iloc[:, 0:2],  # A, B列のみ
-                            "解答付(保存用)": test_df           # A, B, C列すべて
+                        # 書式: 枠線あり, 左寄せ
+                        fmt_border = workbook.add_format({'border': 1, 'align': 'left', 'valign': 'vcenter', 'text_wrap': True})
+                        # 書式: 見出し用 (太字のみ, 色なし, 枠線あり)
+                        fmt_header = workbook.add_format({'bold': True, 'border': 1, 'align': 'center', 'valign': 'vcenter'})
+
+                        sheets_data = {
+                            "問題用紙": q_sheet_df,
+                            "解答付(保存用)": ans_sheet_df
                         }
-                
-                        for sheet_name, data in sheets_config.items():
-                            # シート作成 (データ書き込みは手動で行い、余白を作る)
+
+                        for sheet_name, data in sheets_data.items():
                             worksheet = workbook.add_worksheet(sheet_name)
-                            
-                            # 列の幅を自動調整 (データに基づいて計算)
+            
+                            # 列幅の自動調整 (少し余裕を持たせる)
                             for i, col in enumerate(data.columns):
-                                max_len = max(data[col].astype(str).map(len).max(), len(col)) + 4
-                                # 余白のため列インデックスを +1 する
-                                worksheet.set_column(i + 1, i + 1, min(max_len, 50))
-                
-                            # ヘッダーの書き込み (2行目、B列から開始)
+                                # データの最大文字数と見出しの長さを比較
+                                max_content_len = data[col].astype(str).map(len).max()
+                                column_len = max(max_content_len, len(col))
+                                # 係数をかけて幅を決定 (日本語や特殊文字を考慮して1.5倍+余白)
+                                adjusted_width = min(max(column_len * 1.5, 15), 60)
+                                worksheet.set_column(i + 1, i + 1, adjusted_width, fmt_border)
+
+                            # 見出しの書き込み (2行目, B列から)
                             for col_num, value in enumerate(data.columns.values):
                                 worksheet.write(1, col_num + 1, value, fmt_header)
-                
-                            # データの書き込み (3行目、B列から開始)
+
+                            # データの書き込み (3行目, B列から)
                             for row_num, row_data in enumerate(data.values):
                                 for col_num, cell_value in enumerate(row_data):
                                     worksheet.write(row_num + 2, col_num + 1, cell_value, fmt_border)
-                
-                            # 印刷用設定 (A列と1行目を空けているので、そこを避けて印刷範囲を設定)
+
+                            # 印刷設定
                             worksheet.set_paper(9) # A4
-                            worksheet.set_margins(left=0.7, right=0.7, top=0.7, bottom=0.7)
-                
-                    # 3. ダウンロードボタン
+                            worksheet.set_margins(0.7, 0.7, 0.7, 0.7)
+
+                    # 3. ダウンロード
                     st.download_button(
                         label="📥 生成したExcelファイルを保存する",
                         data=output.getvalue(),
@@ -234,18 +242,16 @@ if uploaded_file is not None:
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                         use_container_width=True 
                     )
-                
-                
+
+
+
+
+            
                     
     except Exception as e:
         st.error(f"エラーが発生しました: {e}")
 else:
     st.info("上の枠にExcelファイルをドラッグ＆ドロップしてください。")
-
-
-
-
-
 
 
 
