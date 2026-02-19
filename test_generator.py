@@ -179,51 +179,68 @@ if uploaded_file is not None:
                 with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
                     test_df.to_excel(writer, index=False, sheet_name='Test')
 
-                                    # xlsxwriterのオブジェクトを取得
-                    workbook  = writer.book
-                    worksheet = writer.sheets['Test']
-                        # --- 書式の設定 ---
-                    # 1. 枠線の設定 (1は細い実線)
-                    border_fmt = workbook.add_format({'border': 1, 'align': 'left', 'valign': 'vcenter'})
-                    
-                    # 2. 見出しのデザイン (背景色:薄いグレー, 太字, 枠線)
-                    header_fmt = workbook.add_format({
-                        'bold': True,
-                        'bg_color': '#D3D3D3',
-                        'border': 1,
-                        'align': 'center'
-                    })
-
-                   # 見出しに書式を適用
-                    for col_num, value in enumerate(test_df.columns.values):
-                        worksheet.write(0, col_num, value, header_fmt)
+                    # 1. ファイル名の生成 (元のファイル名 + 日付 + 範囲)
+                    now = datetime.datetime.now().strftime("%Y%m%d_%H%M")
+                    original_name = os.path.splitext(uploaded_file.name)[0]
+                    # ファイル名に使えない文字を置換
+                    safe_name = re.sub(r'[\\/:*?"<>|]', '', original_name)
+                    output_filename = f"{safe_name}_{start_num}-{end_num}_{now}.xlsx"
                 
-                    # データ行に枠線を適用し、列幅を調整
-                    for i, col in enumerate(test_df.columns):
-                        # 列の最大文字数を計算して幅を決定 (最小10, 最大50)
-                        column_len = max(test_df[col].astype(str).map(len).max(), len(col)) + 2
-                        column_len = min(max(column_len, 10), 50) 
+                    # 2. Excel出力バッファの作成
+                    output = io.BytesIO()
+                    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+                        workbook = writer.book
                         
-                        # 列全体の幅と枠線を設定
-                        worksheet.set_column(i, i, column_len, border_fmt)
+                        # 書式設定
+                        fmt_border = workbook.add_format({'border': 1, 'align': 'left', 'valign': 'vcenter'})
+                        fmt_header = workbook.add_format({'bold': True, 'bg_color': '#EFEFEF', 'border': 1, 'align': 'center'})
                 
-                # ポインタを戻してダウンロードボタンへ
-                processed_data = output.getvalue()
-
-                st.download_button(
-                    label="📥 生成したExcelファイルを保存する",
-                    data=output.getvalue(),
-                    file_name=f"test_{start_num}-{end_num}.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    use_container_width=True 
-                )
-
-    except Exception as e:
-        st.error(f"エラーが発生しました: {e}")
-else:
-    st.info("上の枠にExcelファイルをドラッグ＆ドロップしてください。")
-
-
-
+                        # シートの定義 (問題のみ / 解答付き)
+                        sheets_config = {
+                            "問題用紙": test_df.iloc[:, 0:2],  # A, B列のみ
+                            "解答付(保存用)": test_df           # A, B, C列すべて
+                        }
+                
+                        for sheet_name, data in sheets_config.items():
+                            # シート作成 (データ書き込みは手動で行い、余白を作る)
+                            worksheet = workbook.add_worksheet(sheet_name)
+                            
+                            # 列の幅を自動調整 (データに基づいて計算)
+                            for i, col in enumerate(data.columns):
+                                max_len = max(data[col].astype(str).map(len).max(), len(col)) + 4
+                                # 余白のため列インデックスを +1 する
+                                worksheet.set_column(i + 1, i + 1, min(max_len, 50))
+                
+                            # ヘッダーの書き込み (2行目、B列から開始)
+                            for col_num, value in enumerate(data.columns.values):
+                                worksheet.write(1, col_num + 1, value, fmt_header)
+                
+                            # データの書き込み (3行目、B列から開始)
+                            for row_num, row_data in enumerate(data.values):
+                                for col_num, cell_value in enumerate(row_data):
+                                    worksheet.write(row_num + 2, col_num + 1, cell_value, fmt_border)
+                
+                            # 印刷用設定 (A列と1行目を空けているので、そこを避けて印刷範囲を設定)
+                            worksheet.set_paper(9) # A4
+                            worksheet.set_margins(left=0.7, right=0.7, top=0.7, bottom=0.7)
+                
+                    # 3. ダウンロードボタン
+                    st.download_button(
+                        label="📥 生成したExcelファイルを保存する",
+                        data=output.getvalue(),
+                        file_name=output_filename,
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        use_container_width=True 
+                    )
+                
+                
+                    
+                    except Exception as e:
+                        st.error(f"エラーが発生しました: {e}")
+                else:
+                    st.info("上の枠にExcelファイルをドラッグ＆ドロップしてください。")
+                
+                
+                
 
 
