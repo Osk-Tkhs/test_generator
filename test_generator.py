@@ -151,7 +151,7 @@ if uploaded_file is not None:
         st.divider()
         st.subheader("③：出題範囲、出題数の設定")
 
-        col1, col2, col3 = st.columns(3)
+        col1, col2, col3, col4 = st.columns(4)
 
         min_val = int(first_col_numeric.min())
         max_val = int(first_col_numeric.max())
@@ -171,6 +171,12 @@ if uploaded_file is not None:
                 1,
                 max(1, available_count),
                 min(10, available_count),
+            )
+
+        with col4:
+            # 【追加】1列あたりの問題数設定
+            rows_per_block = st.number_input(
+                "1列の件数", 5, 100, 25, help="この件数ごとに右側に新しい列を作ります"
             )
 
         sort_option = st.radio(
