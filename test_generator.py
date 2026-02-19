@@ -178,7 +178,38 @@ if uploaded_file is not None:
                 output = io.BytesIO()
                 with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
                     test_df.to_excel(writer, index=False, sheet_name='Test')
+
+                                    # xlsxwriterのオブジェクトを取得
+                    workbook  = writer.book
+                    worksheet = writer.sheets['Test']
+                        # --- 書式の設定 ---
+                    # 1. 枠線の設定 (1は細い実線)
+                    border_fmt = workbook.add_format({'border': 1, 'align': 'left', 'valign': 'vcenter'})
+                    
+                    # 2. 見出しのデザイン (背景色:薄いグレー, 太字, 枠線)
+                    header_fmt = workbook.add_format({
+                        'bold': True,
+                        'bg_color': '#D3D3D3',
+                        'border': 1,
+                        'align': 'center'
+                    })
+
+                   # 見出しに書式を適用
+                    for col_num, value in enumerate(test_df.columns.values):
+                        worksheet.write(0, col_num, value, header_fmt)
                 
+                    # データ行に枠線を適用し、列幅を調整
+                    for i, col in enumerate(test_df.columns):
+                        # 列の最大文字数を計算して幅を決定 (最小10, 最大50)
+                        column_len = max(test_df[col].astype(str).map(len).max(), len(col)) + 2
+                        column_len = min(max(column_len, 10), 50) 
+                        
+                        # 列全体の幅と枠線を設定
+                        worksheet.set_column(i, i, column_len, border_fmt)
+                
+                # ポインタを戻してダウンロードボタンへ
+                processed_data = output.getvalue()
+
                 st.download_button(
                     label="📥 生成したExcelファイルを保存する",
                     data=output.getvalue(),
@@ -191,6 +222,7 @@ if uploaded_file is not None:
         st.error(f"エラーが発生しました: {e}")
 else:
     st.info("上の枠にExcelファイルをドラッグ＆ドロップしてください。")
+
 
 
 
