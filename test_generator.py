@@ -5,7 +5,7 @@ import re
 import io
 import os
 
-st.set_page_config(page_title="Test Generator", layout="centered") 
+st.set_page_config(page_title="Test Generator", layout="centered")
 st.title("📝 Test Generator for Excel")
 
 # --- ①：出題リスト(xlsx)の準備 ---
@@ -19,31 +19,49 @@ with tab1:
     with col_dl1:
         if os.path.exists("template.xlsx"):
             with open("template.xlsx", "rb") as f:
-                st.download_button("📁 ひな型(空)をダウンロード", f, "template.xlsx", use_container_width=True)
+                st.download_button(
+                    "📁 ひな型(空)をダウンロード",
+                    f,
+                    "template.xlsx",
+                    use_container_width=True,
+                )
     with col_dl2:
         if os.path.exists("sample_data.xlsx"):
             with open("sample_data.xlsx", "rb") as f:
-                st.download_button("💡 見本(データ入)をダウンロード", f, "sample_data.xlsx", use_container_width=True)
-    
-    st.success("""
+                st.download_button(
+                    "💡 見本(データ入)をダウンロード",
+                    f,
+                    "sample_data.xlsx",
+                    use_container_width=True,
+                )
+
+    st.success(
+        """
     **作成した出題リスト(xlsx)について、以下の2点をご確認ください：**
     - 1行目は「問題No」「問題」「解答」などの**見出し行**である
     - 2行目以降は 左端（A列）が **「半角数字」** で **「1～問題数」** の **「連番」** になっている（1, 2, 3...問題数）
-    """)
+    """
+    )
 
 with tab2:
-    st.success("""
+    st.success(
+        """
     **お手持ちの出題リスト(xlsx)について、以下の2点をご確認ください：**
     - 1行目は「問題No」「問題」「解答」などの**見出し行**である
     - 2行目以降は 左端（A列）が **「半角数字」** で **「数値（通し番号）」** が入っている
-    """)
+    """
+    )
 
 st.divider()
 
 # --- ②：出題リスト(xlsx)のアップロード ---
 st.write("### ②：出題リスト(xlsx)のアップロード")
 
-uploaded_file = st.file_uploader("出題リスト(xlsx)をアップロードしてください", type=["xlsx"], accept_multiple_files=False)
+uploaded_file = st.file_uploader(
+    "出題リスト(xlsx)をアップロードしてください",
+    type=["xlsx"],
+    accept_multiple_files=False,
+)
 
 if uploaded_file is not None:
     try:
@@ -54,8 +72,8 @@ if uploaded_file is not None:
         def clear_pure_spaces(x):
             if isinstance(x, str):
                 # 前後の空白を消して、中身が何もなくなれば None にする
-                cleaned = x.strip().replace('　', '')
-                return None if cleaned == '' else x
+                cleaned = x.strip().replace("　", "")
+                return None if cleaned == "" else x
             return x
 
         # 全セルに対し「スペースのみ」なら空にする処理を適用
@@ -65,7 +83,7 @@ if uploaded_file is not None:
         def remove_all_spaces(x):
             if isinstance(x, str):
                 # A列は文字の中にあるスペースもすべて排除
-                return x.strip().replace(' ', '').replace('　', '')
+                return x.strip().replace(" ", "").replace("　", "")
             return x
 
         df_raw.iloc[:, 0] = df_raw.iloc[:, 0].apply(remove_all_spaces)
@@ -73,11 +91,11 @@ if uploaded_file is not None:
         # --- ③ 有効範囲の特定 ---
         # A列に有効な値がある「一番下の行」を特定 (書式のみの空セルはここで排除される)
         last_idx = df_raw.iloc[:, 0].dropna().index.max()
-        
+
         if pd.isna(last_idx):
             st.error("1列目に数値を入力してください。")
             st.stop()
-            
+
         # A列の末尾までを「有効データ」として切り出す
         df = df_raw.loc[:last_idx].copy()
 
@@ -86,8 +104,8 @@ if uploaded_file is not None:
 
         # --- ① 1列目の数値・形式チェック ---
         # A列を数値変換（数値化できないものはNaNにする）
-        first_col_numeric = pd.to_numeric(df.iloc[:, 0], errors='coerce')
-        
+        first_col_numeric = pd.to_numeric(df.iloc[:, 0], errors="coerce")
+
         if first_col_numeric.isna().any():
             # A列に文字が混じっている行を特定
             error_rows = df[first_col_numeric.isna()].index + 2
@@ -98,10 +116,12 @@ if uploaded_file is not None:
         # --- ② 1列目の連番チェック (1〜Nになっているか) ---
         # 期待される連番 [1, 2, 3, ..., 行数]
         expected_series = pd.Series(range(1, len(df) + 1))
-        
+
         if not (first_col_numeric.values == expected_series.values).all():
             st.error("⚠️ 1列目が「1からの連番」になっていません。")
-            st.info(f"期待される最終番号: {len(df)} (現在の最大: {int(first_col_numeric.max())})")
+            st.info(
+                f"期待される最終番号: {len(df)} (現在の最大: {int(first_col_numeric.max())})"
+            )
             st.warning("途中に欠番、重複、または1から始まっていない箇所があります。")
             st.stop()
 
@@ -127,13 +147,12 @@ if uploaded_file is not None:
         # --- ここまで来ればデータは完璧 ---
         st.success(f"データチェック完了：{len(df)}件の問題を正しく読み込みました。")
 
-
         # --- ③：設定入力 ---
         st.divider()
         st.subheader("③：出題範囲、出題数の設定")
-        
+
         col1, col2, col3 = st.columns(3)
-        
+
         min_val = int(first_col_numeric.min())
         max_val = int(first_col_numeric.max())
 
@@ -141,27 +160,34 @@ if uploaded_file is not None:
             start_num = st.number_input("始点問題No.", min_val, max_val, min_val)
         with col2:
             end_num = st.number_input("終点問題No.", start_num, max_val, max_val)
-            
+
         mask = (first_col_numeric >= start_num) & (first_col_numeric <= end_num)
         filtered_df = df[mask]
         available_count = len(filtered_df)
 
         with col3:
-            count = st.number_input(f"問題数 (最大:{available_count})", 1, max(1, available_count), min(10, available_count))
+            count = st.number_input(
+                f"問題数 (最大:{available_count})",
+                1,
+                max(1, available_count),
+                min(10, available_count),
+            )
 
         sort_option = st.radio(
             "問題の並び順を選んでください",
             ["昇順固定 (番号の小さい順)", "降順固定 (番号の大きい順)", "順番ランダム"],
-            horizontal=True
+            horizontal=True,
         )
 
         # --- 生成実行 ---
         st.divider()
         _, btn_col, _ = st.columns([1, 2, 1])
-        
+
         if btn_col.button("🚀 この条件でテストを生成する", use_container_width=True):
             if available_count == 0:
-                st.warning("指定された範囲にデータがありません。番号設定を確認してください。")
+                st.warning(
+                    "指定された範囲にデータがありません。番号設定を確認してください。"
+                )
             else:
                 # 1. まずはランダムに必要数を抽出
                 sampled_df = filtered_df.sample(n=count)
@@ -173,66 +199,94 @@ if uploaded_file is not None:
                     test_df = sampled_df.sort_values(by=df.columns[0], ascending=False)
                 else:
                     test_df = sampled_df
-                
+
                 st.success(f"抽出完了！ ({count}問)")
                 st.dataframe(test_df, use_container_width=True)
 
                 output = io.BytesIO()
-                with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-                    test_df.to_excel(writer, index=False, sheet_name='Test')
+                with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
+                    test_df.to_excel(writer, index=False, sheet_name="Test")
 
                     # 1. ファイル名の生成 (元のファイル名 + 日付 + 範囲)
                     now = datetime.datetime.now().strftime("%Y%m%d_%H%M")
                     original_name = os.path.splitext(uploaded_file.name)[0]
                     # ファイル名に使えない文字を置換
-                    safe_name = re.sub(r'[\\/:*?"<>|]', '', original_name)
+                    safe_name = re.sub(r'[\\/:*?"<>|]', "", original_name)
                     output_filename = f"{safe_name}_{start_num}-{end_num}_{now}.xlsx"
                     #
                     # 2. 出力データの準備 (問題Noを除外: 1列目以降を使用)
                     # 問題シート用: [問題, 解答欄(空)]
                     q_sheet_df = test_df.iloc[:, [1]].copy()
-                    q_sheet_df["解答欄"] = "" # 空の解答欄を追加
-    
+                    q_sheet_df["解答欄"] = ""  # 空の解答欄を追加
+
                     # 解答付シート用: [問題, 解答]
                     ans_sheet_df = test_df.iloc[:, [1, 2]].copy()
 
                     output = io.BytesIO()
-                    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+                    with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
                         workbook = writer.book
-                        # 書式: 枠線あり, 左寄せ
-                        fmt_border = workbook.add_format({'border': 1, 'align': 'left', 'valign': 'vcenter', 'text_wrap': True})
-                        # 書式: 見出し用 (太字のみ, 色なし, 枠線あり)
-                        fmt_header = workbook.add_format({'bold': True, 'border': 1, 'align': 'center', 'valign': 'vcenter'})
+                        # 基本書式: 枠線あり, 左寄せ, 折り返しあり
+                        fmt_border = workbook.add_format(
+                            {
+                                "border": 1,
+                                "align": "left",
+                                "valign": "vcenter",
+                                "text_wrap": True,
+                            }
+                        )
+                        # 見出し用: 太字, 枠線あり, 中央寄せ
+                        fmt_header = workbook.add_format(
+                            {
+                                "bold": True,
+                                "border": 1,
+                                "align": "center",
+                                "valign": "vcenter",
+                            }
+                        )
+                        # 【追加】列幅調整用（枠線なし）: set_columnで枠線がつかないようにする
+                        fmt_none = workbook.add_format({"border": 0})
 
                         sheets_data = {
                             "問題用紙": q_sheet_df,
-                            "解答付(保存用)": ans_sheet_df
+                            "解答付(保存用)": ans_sheet_df,
                         }
 
                         for sheet_name, data in sheets_data.items():
                             worksheet = workbook.add_worksheet(sheet_name)
-            
-                            # 列幅の自動調整 (少し余裕を持たせる)
+
+                            # 1. 列幅のみを設定 (ここでは枠線を引かない)
                             for i, col in enumerate(data.columns):
-                                # データの最大文字数と見出しの長さを比較
                                 max_content_len = data[col].astype(str).map(len).max()
                                 column_len = max(max_content_len, len(col))
-                                # 係数をかけて幅を決定 (日本語や特殊文字を考慮して1.5倍+余白)
-                                adjusted_width = min(max(column_len * 1.5, 15), 60)
-                                worksheet.set_column(i + 1, i + 1, adjusted_width, fmt_border)
+                                adjusted_width = min(
+                                    max(column_len * 2.0, 18), 70
+                                )  # 幅をさらに広めに調整
+                                worksheet.set_column(
+                                    i + 1, i + 1, adjusted_width, None
+                                )  # 第4引数をNoneに
 
-                            # 見出しの書き込み (2行目, B列から)
+                            # 2. 見出しの書き込み (2行目, B列から)
                             for col_num, value in enumerate(data.columns.values):
                                 worksheet.write(1, col_num + 1, value, fmt_header)
 
-                            # データの書き込み (3行目, B列から)
+                            # 3. データの書き込み (3行目, B列から)
+                            # ここで一マスずつ write することで、データがある範囲だけに枠線が引かれます
                             for row_num, row_data in enumerate(data.values):
+                                # 行の高さを少し広げる (25ピクセル)
+                                worksheet.set_row(row_num + 2, 25)
                                 for col_num, cell_value in enumerate(row_data):
-                                    worksheet.write(row_num + 2, col_num + 1, cell_value, fmt_border)
+                                    # 各セルに個別に枠線付き書式を適用
+                                    worksheet.write(
+                                        row_num + 2, col_num + 1, cell_value, fmt_border
+                                    )
 
                             # 印刷設定
-                            worksheet.set_paper(9) # A4
+                            worksheet.set_paper(9)  # A4
                             worksheet.set_margins(0.7, 0.7, 0.7, 0.7)
+                            # 印刷範囲をデータがある部分だけに限定
+                            worksheet.print_area(1, 1, len(data) + 1, len(data.columns))
+
+                    # (中略: ダウンロードボタンへ)
 
                     # 3. ダウンロード
                     st.download_button(
@@ -240,18 +294,10 @@ if uploaded_file is not None:
                         data=output.getvalue(),
                         file_name=output_filename,
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        use_container_width=True 
+                        use_container_width=True,
                     )
 
-
-
-
-            
-                    
     except Exception as e:
         st.error(f"エラーが発生しました: {e}")
 else:
     st.info("上の枠にExcelファイルをドラッグ＆ドロップしてください。")
-
-
-
