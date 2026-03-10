@@ -226,7 +226,7 @@ if uploaded_file is not None:
 
                 # データ準備
                 q_sheet_df = test_df.iloc[:, 1:2].copy()  # 問題のみ
-                q_sheet_df["解答欄"] = ""
+                q_sheet_df["解答"] = ""
                 ans_sheet_df = test_df.iloc[:, 1:3].copy()  # 問題 + 解答
 
                 output = io.BytesIO()
@@ -246,7 +246,6 @@ if uploaded_file is not None:
                             "bold": True,
                             "border": 1,
                             "align": "center",
-                            "bg_color": "#F2F2F2",
                         }
                     )
                     fmt_title = workbook.add_format({"bold": True, "font_size": 14})
@@ -328,3 +327,4 @@ if uploaded_file is not None:
         st.error(f"エラーが発生しました: {e}")
 else:
     st.info("上の枠にExcelファイルをドラッグ＆ドロップしてください。")
+
