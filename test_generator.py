@@ -207,7 +207,7 @@ if uploaded_file is not None:
                     test_df = sampled_df
 
                 st.success(f"抽出完了！ ({count}問)")
-                st.dataframe(test_df, use_container_width=True)
+                #st.dataframe(test_df, use_container_width=True)
 
                 output = io.BytesIO()
                 with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
@@ -327,4 +327,5 @@ if uploaded_file is not None:
         st.error(f"エラーが発生しました: {e}")
 else:
     st.info("上の枠にExcelファイルをドラッグ＆ドロップしてください。")
+
 
