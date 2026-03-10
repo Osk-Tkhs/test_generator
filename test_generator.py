@@ -187,145 +187,148 @@ if uploaded_file is not None:
 
         # --- 生成実行 ---
         st.divider()
-        _, btn_col, _ = st.columns([1, 2, 1])
-
-        if btn_col.button("🚀 この条件でテストを生成する", use_container_width=True):
-            if available_count == 0:
+  
+        if available_count == 0:
                 st.warning(
                     "指定された範囲にデータがありません。番号設定を確認してください。"
                 )
+        else:
+            # 1. まずはランダムに必要数を抽出
+            sampled_df = filtered_df.sample(n=count)
+
+            # 2. 並び順設定に応じてソート処理
+            if sort_option == "昇順固定 (番号の小さい順)":
+                test_df = sampled_df.sort_values(by=df.columns[0], ascending=True)
+            elif sort_option == "降順固定 (番号の大きい順)":
+                test_df = sampled_df.sort_values(by=df.columns[0], ascending=False)
             else:
-                # 1. まずはランダムに必要数を抽出
-                sampled_df = filtered_df.sample(n=count)
+                test_df = sampled_df
 
-                # 2. 並び順設定に応じてソート処理
-                if sort_option == "昇順固定 (番号の小さい順)":
-                    test_df = sampled_df.sort_values(by=df.columns[0], ascending=True)
-                elif sort_option == "降順固定 (番号の大きい順)":
-                    test_df = sampled_df.sort_values(by=df.columns[0], ascending=False)
-                else:
-                    test_df = sampled_df
+            st.success(f"抽出完了！ ({count}問)")
+            #st.dataframe(test_df, use_container_width=True)
 
-                st.success(f"抽出完了！ ({count}問)")
-                #st.dataframe(test_df, use_container_width=True)
+            output = io.BytesIO()
+            with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
+                test_df.to_excel(writer, index=False, sheet_name="Test")
 
-                output = io.BytesIO()
-                with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
-                    test_df.to_excel(writer, index=False, sheet_name="Test")
+            # 1. ファイル名とヘッダー用タイトルの準備
+            now = datetime.datetime.now().strftime("%Y%m%d_%H%M")
+            display_date = datetime.datetime.now().strftime("%Y/%m/%d")
+            raw_filename = os.path.splitext(uploaded_file.name)[0]
+            safe_base_name = re.sub(r'[\\/:*?"<>|]', "", raw_filename)
+            output_filename = f"{safe_base_name}_{start_num}-{end_num}_{now}.xlsx"
 
-                # 1. ファイル名とヘッダー用タイトルの準備
-                now = datetime.datetime.now().strftime("%Y%m%d_%H%M")
-                display_date = datetime.datetime.now().strftime("%Y/%m/%d")
-                raw_filename = os.path.splitext(uploaded_file.name)[0]
-                safe_base_name = re.sub(r'[\\/:*?"<>|]', "", raw_filename)
-                output_filename = f"{safe_base_name}_{start_num}-{end_num}_{now}.xlsx"
+            # 2. ユーザー設定：1列（1ブロック）あたりの問題数 (例: 20問で折り返し)
+            # ここでは25問ごとに右側に新しい列を作る設定にします
+            rows_per_block = st.sidebar.number_input("1列あたりの問題数", 5, 50, 25)
 
-                # 2. ユーザー設定：1列（1ブロック）あたりの問題数 (例: 20問で折り返し)
-                # ここでは25問ごとに右側に新しい列を作る設定にします
-                rows_per_block = st.sidebar.number_input("1列あたりの問題数", 5, 50, 25)
+            # データ準備
+            q_sheet_df = test_df.iloc[:, 1:2].copy()  # 問題のみ
+            q_sheet_df["解答"] = ""
+            ans_sheet_df = test_df.iloc[:, 1:3].copy()  # 問題 + 解答
 
-                # データ準備
-                q_sheet_df = test_df.iloc[:, 1:2].copy()  # 問題のみ
-                q_sheet_df["解答"] = ""
-                ans_sheet_df = test_df.iloc[:, 1:3].copy()  # 問題 + 解答
-
-                output = io.BytesIO()
-                with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
-                    workbook = writer.book
-                    # 書式定義
-                    fmt_border = workbook.add_format(
-                        {
-                            "border": 1,
-                            "align": "left",
-                            "valign": "vcenter",
-                            "text_wrap": True,
-                        }
-                    )
-                    fmt_header = workbook.add_format(
-                        {
-                            "bold": True,
-                            "border": 1,
-                            "align": "center",
-                        }
-                    )
-                    fmt_title = workbook.add_format({"bold": True, "font_size": 14})
-                    fmt_info = workbook.add_format(
-                        {"bottom": 1, "align": "left"}
-                    )  # 氏名欄などの下線
-
-                    sheets_data = {
-                        "問題用紙": q_sheet_df,
-                        "解答付(保存用)": ans_sheet_df,
+            output = io.BytesIO()
+            with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
+                workbook = writer.book
+                # 書式定義
+                fmt_border = workbook.add_format(
+                    {
+                        "border": 1,
+                        "align": "left",
+                        "valign": "vcenter",
+                        "text_wrap": True,
                     }
+                )
+                fmt_header = workbook.add_format(
+                    {
+                        "bold": True,
+                        "border": 1,
+                        "align": "center",
+                    }
+                )
+                fmt_title = workbook.add_format({"bold": True, "font_size": 14})
+                fmt_info = workbook.add_format(
+                    {"bottom": 1, "align": "left"}
+                )  # 氏名欄などの下線
 
-                    for sheet_name, data in sheets_data.items():
-                        worksheet = workbook.add_worksheet(sheet_name)
-                        num_cols_per_item = len(
-                            data.columns
-                        )  # 1ブロックの列数 (2 or 3)
+                sheets_data = {
+                    "問題用紙": q_sheet_df,
+                    "解答付(保存用)": ans_sheet_df,
+                }
 
-                        # --- A. ヘッダー情報の書き込み (1行目〜3行目) ---
-                        worksheet.write("B1", f"データ元: {raw_filename}", fmt_title)
-                        worksheet.write(
-                            "B2", f"実施日: {display_date}　　氏名: ", fmt_info
-                        )
-                        worksheet.set_row(0, 25)  # タイトル行を高く
-                        worksheet.set_row(1, 20)  # 氏名行
+                for sheet_name, data in sheets_data.items():
+                    worksheet = workbook.add_worksheet(sheet_name)
+                    num_cols_per_item = len(
+                        data.columns
+                    )  # 1ブロックの列数 (2 or 3)
 
-                        # --- B. 複数列へのレイアウト配置 ---
-                        for i, (idx, row_vals) in enumerate(data.iterrows()):
-                            # どのブロック（列方向）に配置するか計算
-                            block_idx = i // rows_per_block
-                            row_in_block = i % rows_per_block
+                    # --- A. ヘッダー情報の書き込み (1行目〜3行目) ---
+                    worksheet.write("B1", f"データ元: {raw_filename}", fmt_title)
+                    worksheet.write(
+                        "B2", f"実施日: {display_date}　　氏名: ", fmt_info
+                    )
+                    worksheet.set_row(0, 25)  # タイトル行を高く
+                    worksheet.set_row(1, 20)  # 氏名行
 
-                            # 書き出し開始位置の計算 (B列から開始、ブロック間に1列空ける)
-                            start_col = 1 + (block_idx * (num_cols_per_item + 1))
-                            start_row = 4  # 5行目からデータ開始
+                    # --- B. 複数列へのレイアウト配置 ---
+                    for i, (idx, row_vals) in enumerate(data.iterrows()):
+                        # どのブロック（列方向）に配置するか計算
+                        block_idx = i // rows_per_block
+                        row_in_block = i % rows_per_block
 
-                            # 見出しの書き込み (各ブロックの最初だけ)
-                            if row_in_block == 0:
-                                for c, col_name in enumerate(data.columns):
-                                    worksheet.write(
-                                        start_row - 1,
-                                        start_col + c,
-                                        col_name,
-                                        fmt_header,
-                                    )
-                                # 列幅の設定
-                                for c, col_name in enumerate(data.columns):
-                                    width = 40 if "解答" in col_name else 25
-                                    worksheet.set_column(
-                                        start_col + c, start_col + c, width
-                                    )
+                        # 書き出し開始位置の計算 (B列から開始、ブロック間に1列空ける)
+                        start_col = 1 + (block_idx * (num_cols_per_item + 1))
+                        start_row = 4  # 5行目からデータ開始
 
-                            # データの書き込み
-                            for c, value in enumerate(row_vals):
+                        # 見出しの書き込み (各ブロックの最初だけ)
+                        if row_in_block == 0:
+                            for c, col_name in enumerate(data.columns):
                                 worksheet.write(
-                                    start_row + row_in_block,
+                                    start_row - 1,
                                     start_col + c,
-                                    value,
-                                    fmt_border,
+                                    col_name,
+                                    fmt_header,
+                                )
+                            # 列幅の設定
+                            for c, col_name in enumerate(data.columns):
+                                width = 40 if "解答" in col_name else 25
+                                worksheet.set_column(
+                                    start_col + c, start_col + c, width
                                 )
 
-                            worksheet.set_row(start_row + row_in_block, 25)  # 行高
+                        # データの書き込み
+                        for c, value in enumerate(row_vals):
+                            worksheet.write(
+                                start_row + row_in_block,
+                                start_col + c,
+                                value,
+                                fmt_border,
+                            )
 
-                        # 印刷設定
-                        worksheet.set_paper(9)  # A4
-                        worksheet.set_landscape()  # 問題が多い場合は横向きが推奨されるため横に設定
-                        worksheet.set_margins(0.5, 0.5, 0.5, 0.5)
+                        worksheet.set_row(start_row + row_in_block, 25)  # 行高
 
-                # 3. ダウンロードボタン
-                st.download_button(
-                    label="📥 生成したExcelファイルを保存する",
-                    data=output.getvalue(),
-                    file_name=output_filename,
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    use_container_width=True,
-                )
+                    # 印刷設定
+                    worksheet.set_paper(9)  # A4
+                    worksheet.set_landscape()  # 問題が多い場合は横向きが推奨されるため横に設定
+                    worksheet.set_margins(0.5, 0.5, 0.5, 0.5)
+
+            # 3. ダウンロードボタン
+            st.write("#### ④：テストの保存")
+            st.download_button(
+                label="📥 この条件でテストを生成して保存する",
+                data=output.getvalue(),
+                file_name=output_filename,
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True,
+            )
+            # プレビューとして中身を見せておく
+            with st.expander("抽出された問題のプレビュー"):
+                st.dataframe(test_df, use_container_width=True)
 
     except Exception as e:
         st.error(f"エラーが発生しました: {e}")
 else:
     st.info("上の枠にExcelファイルをドラッグ＆ドロップしてください。")
+
 
 
