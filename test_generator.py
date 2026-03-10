@@ -322,13 +322,14 @@ if uploaded_file is not None:
                 use_container_width=True,
             )
             # プレビューとして中身を見せておく
-            with st.expander("抽出された問題のプレビュー"):
-                st.dataframe(test_df, use_container_width=True)
+            #with st.expander("抽出された問題のプレビュー"):
+            #    st.dataframe(test_df, use_container_width=True)
 
     except Exception as e:
         st.error(f"エラーが発生しました: {e}")
 else:
     st.info("上の枠にExcelファイルをドラッグ＆ドロップしてください。")
+
 
 
 
