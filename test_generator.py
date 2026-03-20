@@ -5,15 +5,27 @@ import re
 import io
 import os
 
-st.set_page_config(page_title="Test Generator", layout="centered")
-st.title("📝 Test Generator for Excel")
+# メッセージ定義
+
+msg_confirm = """
+    **お手持ちの出題リスト(xlsx)について、以下の2点をご確認ください：**
+    - 1行目は「問題No」「問題」「解答」などの**見出し行**である
+    - 2行目以降は 左端（A列）が **「半角数字」** で **「1～問題数」** の **「連番」** になっている（1, 2, 3...問題数）
+    """
+
+st.set_page_config(page_title="Instant Exam Generator", layout="centered")
+st.title("📝 Instant Exam Generator")
 
 # --- ①：出題リスト(xlsx)の準備 ---
 st.write("### ①：出題リスト(xlsx)の準備")
 
-tab1, tab2 = st.tabs(["A: 新しく作成する", "B: 既存のファイルを使う"])
+tab1, tab2 = st.tabs(["A: 既存の出題リストを使う", "B: 新たな出題リストを作る"])
+
 
 with tab1:
+    st.success(msg_confirm)
+
+with tab2:
     st.info("これから作成する場合は、以下のひな型をダウンロードして入力してください。")
     col_dl1, col_dl2 = st.columns(2)
     with col_dl1:
@@ -35,22 +47,8 @@ with tab1:
                     use_container_width=True,
                 )
 
-    st.success(
-        """
-    **作成した出題リスト(xlsx)について、以下の2点をご確認ください：**
-    - 1行目は「問題No」「問題」「解答」などの**見出し行**である
-    - 2行目以降は 左端（A列）が **「半角数字」** で **「1～問題数」** の **「連番」** になっている（1, 2, 3...問題数）
-    """
-    )
+    st.success(msg_confirm)
 
-with tab2:
-    st.success(
-        """
-    **お手持ちの出題リスト(xlsx)について、以下の2点をご確認ください：**
-    - 1行目は「問題No」「問題」「解答」などの**見出し行**である
-    - 2行目以降は 左端（A列）が **「半角数字」** で **「数値（通し番号）」** が入っている
-    """
-    )
 
 st.divider()
 
@@ -99,8 +97,8 @@ if uploaded_file is not None:
         # A列の末尾までを「有効データ」として切り出す
         df = df_raw.loc[:last_idx].copy()
 
-        # --- 以降、数値チェック・連番チェック・空欄チェック ---
-        # (ここからは、A列が数値か、連番か、B・C列に空欄がないかをチェックするロジック)
+        # --- 以降、数値/連番/空欄チェック ---
+        # (A列が数値∧連番,B・C列の空欄がないかをチェック)
 
         # --- ① 1列目の数値・形式チェック ---
         # A列を数値変換（数値化できないものはNaNにする）
@@ -181,17 +179,17 @@ if uploaded_file is not None:
 
         sort_option = st.radio(
             "問題の並び順を選んでください",
-            ["昇順固定 (番号の小さい順)", "降順固定 (番号の大きい順)", "順番ランダム"],
+            ["順番ランダム", "昇順固定 (番号の小さい順)", "降順固定 (番号の大きい順)"],
             horizontal=True,
         )
 
         # --- 生成実行 ---
         st.divider()
-  
+
         if available_count == 0:
-                st.warning(
-                    "指定された範囲にデータがありません。番号設定を確認してください。"
-                )
+            st.warning(
+                "指定された範囲にデータがありません。番号設定を確認してください。"
+            )
         else:
             # 1. まずはランダムに必要数を抽出
             sampled_df = filtered_df.sample(n=count)
@@ -205,7 +203,7 @@ if uploaded_file is not None:
                 test_df = sampled_df
 
             st.success(f"抽出完了！ ({count}問)")
-            #st.dataframe(test_df, use_container_width=True)
+            # st.dataframe(test_df, use_container_width=True)
 
             output = io.BytesIO()
             with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
@@ -258,15 +256,11 @@ if uploaded_file is not None:
 
                 for sheet_name, data in sheets_data.items():
                     worksheet = workbook.add_worksheet(sheet_name)
-                    num_cols_per_item = len(
-                        data.columns
-                    )  # 1ブロックの列数 (2 or 3)
+                    num_cols_per_item = len(data.columns)  # 1ブロックの列数 (2 or 3)
 
                     # --- A. ヘッダー情報の書き込み (1行目〜3行目) ---
                     worksheet.write("B1", f"データ元: {raw_filename}", fmt_title)
-                    worksheet.write(
-                        "B2", f"実施日: {display_date}　　氏名: ", fmt_info
-                    )
+                    worksheet.write("B2", f"実施日: {display_date}　　氏名: ", fmt_info)
                     worksheet.set_row(0, 25)  # タイトル行を高く
                     worksheet.set_row(1, 20)  # 氏名行
 
@@ -321,15 +315,8 @@ if uploaded_file is not None:
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 use_container_width=True,
             )
-            # プレビューとして中身を見せておく
-            #with st.expander("抽出された問題のプレビュー"):
-            #    st.dataframe(test_df, use_container_width=True)
 
     except Exception as e:
         st.error(f"エラーが発生しました: {e}")
 else:
     st.info("上の枠にExcelファイルをドラッグ＆ドロップしてください。")
-
-
-
-
