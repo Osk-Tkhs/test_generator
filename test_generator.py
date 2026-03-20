@@ -216,10 +216,6 @@ if uploaded_file is not None:
             safe_base_name = re.sub(r'[\\/:*?"<>|]', "", raw_filename)
             output_filename = f"{safe_base_name}_{start_num}-{end_num}_{now}.xlsx"
 
-            # 2. ユーザー設定：1列（1ブロック）あたりの問題数 (例: 20問で折り返し)
-            # ここでは25問ごとに右側に新しい列を作る設定にします
-            rows_per_block = st.sidebar.number_input("1列あたりの問題数", 5, 50, 25)
-
             # データ準備
             q_sheet_df = test_df.iloc[:, 1:2].copy()  # 問題のみ
             q_sheet_df["解答"] = ""
