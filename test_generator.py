@@ -155,9 +155,9 @@ if uploaded_file is not None:
         max_val = int(first_col_numeric.max())
 
         with col1:
-            start_num = st.number_input("始点問題No.", min_val, max_val, min_val)
+            start_num = st.number_input("出題範囲(始点)", min_val, max_val, min_val)
         with col2:
-            end_num = st.number_input("終点問題No.", start_num, max_val, max_val)
+            end_num = st.number_input("出題範囲(終点)", start_num, max_val, max_val)
 
         mask = (first_col_numeric >= start_num) & (first_col_numeric <= end_num)
         filtered_df = df[mask]
@@ -246,8 +246,8 @@ if uploaded_file is not None:
                 )  # 氏名欄などの下線
 
                 sheets_data = {
-                    "問題用紙": q_sheet_df,
-                    "解答付(保存用)": ans_sheet_df,
+                    "問題": q_sheet_df,
+                    "解答": ans_sheet_df,
                 }
 
                 for sheet_name, data in sheets_data.items():
@@ -305,7 +305,7 @@ if uploaded_file is not None:
             # 3. ダウンロードボタン
             st.write("#### ④：テストの保存")
             st.download_button(
-                label="📥 この条件でテストを生成して保存する",
+                label="📥 この条件でテストを生成して保存",
                 data=output.getvalue(),
                 file_name=output_filename,
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
