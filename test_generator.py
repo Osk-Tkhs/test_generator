@@ -19,7 +19,7 @@ st.title("📝 Instant Exam Generator")
 # --- ①：出題リスト(xlsx)の準備 ---
 st.write("### ①：出題リスト(xlsx)の準備")
 
-tab1, tab2 = st.tabs(["A: 既存の出題リストを使う", "B: 新たな出題リストを作る"])
+tab1, tab2 = st.tabs(["A: 既存の出題リストを使う", "B: 新規の出題リストを作る"])
 
 
 with tab1:
